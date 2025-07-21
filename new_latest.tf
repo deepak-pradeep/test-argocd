@@ -1,5 +1,5 @@
 locals {
-  application_log_conf = <<-EOT
+  application_log_conf = <<EOT
 [INPUT]
     Name tail
     Tag application.*
@@ -49,7 +49,6 @@ locals {
     Annotations Off
     Buffer_Size 0
 
-# Split logs into stdout_logs and stderr_logs using stream key
 [FILTER]
     Name                rewrite_tag
     Match               application.*
@@ -58,22 +57,22 @@ locals {
 
 [OUTPUT]
     Name cloudwatch_logs
-    Match stderr_logs
+    Match stdout_logs
     region us-east-1
-    log_group_name eks_test_logs
-    log_stream_name $${HOSTNAME}-stderr-$${time}
+    log_group_name fluentbit_cluster_name
+    log_stream_prefix $${HOSTNAME}-
+    log_group_template $kubernetes['namespace_name']
+    log_stream_template $kubernetes['pod_name']
     auto_create_group true
     extra_user_agent container-insights
     workers 1
-    log_format json
-    log_retention_days 7
 
 [OUTPUT]
     Name kinesis_firehose
     Match stdout_logs
     region us-east-1
     Format json
-    delivery_stream PUT-S3-p5K71
+    delivery_stream stream_name
     workers 1
 EOT
 }
