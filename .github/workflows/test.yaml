@@ -8,7 +8,7 @@ jobs:
     steps:
       - name: Write file to shared volume
         run: |
-          sudo -u ubuntu echo "This is a test gha file" > /opt/gha-shared/hello.txt
+          sudo -u ubuntu echo "This is a test gha woowy file" > /opt/gha-shared/hello.txt
 
   read-file:
     needs: write-file
