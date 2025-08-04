@@ -8,7 +8,6 @@ jobs:
     steps:
       - name: Write file to shared volume
         run: |
-          mkdir -p /opt/gha-shared
           echo "This is a test file" > /opt/gha-shared/hello.txt
 
   read-file:
