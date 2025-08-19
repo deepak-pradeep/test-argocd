@@ -37,3 +37,8 @@ extraEnv:
         key: password
 
 ```
+
+```
+kubectl -n polaris port-forward deploy/polaris 8181:8181 8182:8182
+curl -s http://localhost:8182/q/health | jq
+```
