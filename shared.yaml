@@ -1,0 +1,59 @@
+name: Secure Shared Volume Example
+
+on: [push]
+
+jobs:
+  check-permission:
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.check.outputs.allowed }}
+    steps:
+      - name: Check if user is allowed
+        id: check
+        env:
+          ALLOWLIST_JSON: ${{ vars.AUTHORISED_USERS }}
+        run: |
+          if echo '${{ env.ALLOWLIST_JSON }}' | jq -e --arg actor "${{ github.actor }}" 'index($actor) != null' > /dev/null; then
+            echo "allowed=true" >> $GITHUB_OUTPUT
+            echo "User '${{ github.actor }}' is authorized"
+          else
+            echo "allowed=false" >> $GITHUB_OUTPUT
+            echo "User '${{ github.actor }}' is not authorized"
+            echo "Authorized users: ${{ env.ALLOWLIST_JSON }}"
+          fi
+  build:
+    runs-on: ubuntu-latest    
+    needs: check-permission
+    if: needs.check-permission.outputs.allowed == 'true'
+    outputs:
+      shared_dir: ${{ steps.set-shared-dir.outputs.shared_dir }}
+    steps:
+      - name: Set unique shared directory
+        id: set-shared-dir
+        run: |
+          export SHARED_DIR="${GITHUB_RUN_ID}"
+          echo "shared_dir=$SHARED_DIR" >> $GITHUB_OUTPUT
+          mkdir -p "$SHARED_DIR"
+          chmod 700 "$SHARED_DIR" # Restrict access to owner only
+
+      - name: Save file in isolated directory
+        run: |
+          echo "This is running inside Kubernetes runner" > ${{ steps.set-shared-dir.outputs.shared_dir }}/result.txt
+
+  check:
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: needs.check-permission.outputs.allowed == 'true'
+    steps:
+      - name: Read data from isolated shared directory
+        run: |
+          cat ${{ needs.build.outputs.shared_dir }}/result.txt
+
+  cleanup-shared-data:
+    needs: [build, check]
+    runs-on: ubuntu-latest
+    if: needs.check-permission.outputs.allowed == 'true' && always()
+    steps:
+      - name: Clean up run-specific shared directory
+        run: |
+          rm -rf ${{ needs.build.outputs.shared_dir }}
