@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   check-permission:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       allowed: ${{ steps.check.outputs.allowed }}
     steps:
@@ -22,7 +22,7 @@ jobs:
             echo "Authorized users: ${{ env.ALLOWLIST_JSON }}"
           fi
   build:
-    runs-on: ubuntu-latest    
+    runs-on: self-hosted  
     needs: check-permission
     if: needs.check-permission.outputs.allowed == 'true'
     outputs:
@@ -31,7 +31,7 @@ jobs:
       - name: Set unique shared directory
         id: set-shared-dir
         run: |
-          export SHARED_DIR="${GITHUB_RUN_ID}"
+          export SHARED_DIR="/shared/${GITHUB_RUN_ID}"
           echo "shared_dir=$SHARED_DIR" >> $GITHUB_OUTPUT
           mkdir -p "$SHARED_DIR"
           chmod 700 "$SHARED_DIR" # Restrict access to owner only
@@ -42,7 +42,7 @@ jobs:
 
   check:
     needs: [build]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: needs.check-permission.outputs.allowed == 'true'
     steps:
       - name: Read data from isolated shared directory
@@ -51,7 +51,7 @@ jobs:
 
   cleanup-shared-data:
     needs: [build, check]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: needs.check-permission.outputs.allowed == 'true' && always()
     steps:
       - name: Clean up run-specific shared directory
